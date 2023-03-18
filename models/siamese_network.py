@@ -4,6 +4,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
+Tensor = torch.Tensor
+
 class SiameseNet(nn.Module):
     """Defines Siamese network structure made up of two identical feature exractors.
     Args:

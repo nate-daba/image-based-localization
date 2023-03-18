@@ -1,4 +1,4 @@
-from collections import import collections
+from collections import OrderedDict
 from typing import Callable, List, Optional, Tuple, Union
 
 
@@ -19,10 +19,13 @@ class FeatureExtractor(nn.Module):
         
     """
     
-    def __init__(self, initialize_weights : Optional[bool] = True) -> None:
+    def __init__(self, 
+                 initialize_weights : Optional[bool] = True,
+                 extractor_type : str = 'unknown extractor') -> None:
         
         super(FeatureExtractor, self).__init__()
-            
+        
+        self.extractor_type = extractor_type
         self.extract_features = nn.Sequential(OrderedDict([
 
             # layer 1: conv3-64
@@ -113,12 +116,13 @@ class FeatureExtractor(nn.Module):
         
         """
         features = self.extract_features(image)
+        
         return features
     
     def initialize_weights(self) -> None:
         """Initializes weights of feature extractor with ImageNet-1k-trained weights of VGG16.
         """
-        print('initializing weights ...')
+        print('initializing ' + self.extractor_type + ' feature extractor weights ...')
         vgg16 = models.vgg16(pretrained = True)
         net_keys = list(self.extract_features.state_dict().keys())
         vgg_keys = list(vgg16.state_dict().keys())

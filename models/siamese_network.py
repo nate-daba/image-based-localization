@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from models.feature_extractor import FeatureExtractor
+
 
 Tensor = torch.Tensor
 
@@ -14,15 +16,14 @@ class SiameseNet(nn.Module):
         aerial_net (nn.Module): feature extractor for the aerial view images.
     
     """
-    def __init__(self, 
-                 ground_net: nn.Module=None, 
-                 aerial_net: nn.Module=None)->None:
+    def __init__(self)->None:
         super(SiameseNet, self).__init__()
         
-        self.ground_feature_extractor = ground_net
-        self.aerial_feature_extractor = aerial_net
+        print('Creating SiameseNet model ...')
+        self.ground_feature_extractor = FeatureExtractor(initialize_weights=True, extractor_type='ground')
+        self.aerial_feature_extractor = FeatureExtractor(initialize_weights=True, extractor_type='aerial')
         
-        self.fc_layer = nn.Linear(512, 4096, bias=True)
+        self.fc_layer = nn.Linear(512, 1024, bias=True)
         
     def forward(self, 
                 ground_image: Tensor, 

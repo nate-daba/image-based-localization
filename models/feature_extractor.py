@@ -28,13 +28,13 @@ class FeatureExtractor(nn.Module):
         self.extractor_type = extractor_type
         self.extract_features = nn.Sequential(OrderedDict([
 
-            # layer 1: conv3-64
+            # layer 1: conv3-64 (checked)
             ('conv1_1', nn.Conv2d(3, 64, kernel_size=3, stride=1)),
             ('relu1_1', nn.ReLU(inplace=True)),
-            # layer 2: conv3-64
+            # layer 2: conv3-64 (checked)
             ('conv1_2', nn.Conv2d(64, 64, kernel_size=3, stride=1)),
             ('relu1_2', nn.ReLU(inplace=True)),
-            # layer 3: max pooling
+            # layer 3: max pooling (checked)
             ('layer3_maxpool2x2', nn.MaxPool2d(kernel_size=2, 
                                                stride=2, 
                                                padding=0, 
@@ -42,13 +42,13 @@ class FeatureExtractor(nn.Module):
                                                ceil_mode=False)),
 
 
-            # layer 4: conv3-128
+            # layer 4: conv3-128 (checked)
             ('conv2_1', nn.Conv2d(64, 128, kernel_size=3, stride=1)),
             ('relu2_1', nn.ReLU(inplace=True)),
-            # layer 5: conv3-128
+            # layer 5: conv3-128 (checked)
             ('conv2_2', nn.Conv2d(128, 128, kernel_size=3, stride=1)),
             ('relu2_2', nn.ReLU(inplace=True)),
-            # layer 6: max pooling
+            # layer 6: max pooling (checked)
             ('layer6_maxpool2x2', nn.MaxPool2d(kernel_size=2, 
                                      stride=2, 
                                      padding=0, 
@@ -56,16 +56,16 @@ class FeatureExtractor(nn.Module):
                                      ceil_mode=False)), 
 
 
-            # layer 7: conv3-256
+            # layer 7: conv3-256 (checked)
             ('conv3_1', nn.Conv2d(128, 256, kernel_size=3, stride=1)),
             ('relu3_1', nn.ReLU(inplace=True)),
-            # layer 8: conv3-256
+            # layer 8: conv3-256 (checked)
             ('conv3_2', nn.Conv2d(256, 256, kernel_size=3, stride=1)),
             ('relu3_2', nn.ReLU(inplace=True)),
-            # layer 9: conv3-256
+            # layer 9: conv3-256 (checked)
             ('conv3_3', nn.Conv2d(256, 256, kernel_size=3, stride=1)),
             ('relu3_3', nn.ReLU(inplace=True)),
-            # layer 10: max pooling
+            # layer 10: max pooling (checked)
             ('layer10_maxpool2x2', nn.MaxPool2d(kernel_size=2, 
                                                stride=2, 
                                                padding=0, 
@@ -73,16 +73,16 @@ class FeatureExtractor(nn.Module):
                                                ceil_mode=False)),    
 
 
-            # layer 11: conv3-512
+            # layer 11: conv3-512 (checked)
             ('conv4_1', nn.Conv2d(256, 512, kernel_size=3, stride=1)),
             ('relu4_1', nn.ReLU(inplace=True)),
-            # layer 12: conv3-512
+            # layer 12: conv3-512 (checked)
             ('conv4_2', nn.Conv2d(512, 512, kernel_size=3, stride=1)),
             ('relu4_2', nn.ReLU(inplace=True)),
-            # layer 13: conv3-512
+            # layer 13: conv3-512 (checked)
             ('conv4_3', nn.Conv2d(512, 512, kernel_size=3, stride=1)),
             ('relu4_3', nn.ReLU(inplace=True)),
-            # layer 14: max pooling
+            # layer 14: max pooling (checked)
             ('layer14_maxpool2x2', nn.MaxPool2d(kernel_size=2, 
                                                stride=2, 
                                                padding=0, 
@@ -122,7 +122,7 @@ class FeatureExtractor(nn.Module):
     def initialize_weights(self) -> None:
         """Initializes weights of feature extractor with ImageNet-1k-trained weights of VGG16.
         """
-        print('initializing ' + self.extractor_type + ' feature extractor weights ...')
+        print('Initializing ' + self.extractor_type + ' feature extractor weights ...')
         vgg16 = models.vgg16(pretrained = True)
         net_keys = list(self.extract_features.state_dict().keys())
         vgg_keys = list(vgg16.state_dict().keys())

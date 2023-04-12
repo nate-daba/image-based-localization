@@ -51,13 +51,12 @@ class SiameseNet(nn.Module):
         ground_gap = torch.mean(ground_features, (2, 3))
         aerial_gap = torch.mean(aerial_features, (2, 3))
         
-        # pass to fully connected (fc) layer: (B, 4096)
+        # pass to fully connected (fc) layer: (B, 1024)
         ground_fc = self.fc_layer(ground_gap)
         aerial_fc = self.fc_layer(aerial_gap)
         
         # L2 normalize: (B, 4096)
-        ground_global = F.normalize(ground_fc, p=2, dim=1)
-        aerial_global = F.normalize(aerial_fc, p=2, dim=1)
+        ground_embed = F.normalize(ground_fc, p=2, dim=1)
+        aerial_embed = F.normalize(aerial_fc, p=2, dim=1)
         
-        return (aerial_global, ground_global, aerial_features, 
-                ground_features, aerial_fc, ground_fc)
+        return ground_embed, aerial_embed

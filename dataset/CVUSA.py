@@ -8,10 +8,9 @@ import numpy as np
 def transform_input(size):
     
     return transforms.Compose([
-        transforms.Resize(size=tuple(size)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                               std=[0.229, 0.224, 0.225]),
+                             std=[0.229, 0.224, 0.225]),
     ])
 
 class CVUSA(torch.utils.data.Dataset):
@@ -58,8 +57,7 @@ class CVUSA(torch.utils.data.Dataset):
                 idx += 1
         self.test_data_size = len(self.test_id_list)
         
-    def __getitem__(self, 
-                    index : int):
+    def __getitem__(self, index : int):
 
         if self.mode == 'train':
 
@@ -67,28 +65,37 @@ class CVUSA(torch.utils.data.Dataset):
 
             ground_image = Image.open(self.root + self.train_id_list[idx][1]).convert('RGB')
             aerial_image = Image.open(self.root + self.train_id_list[idx][0]).convert('RGB')
+            
+            ground_image = self.transform_ground(ground_image)
+            aerial_image = self.transform_aerial(aerial_image)
+        
+            return ground_image, aerial_image, torch.tensor(idx)
 
-        elif self.mode == 'test':
+        elif self.mode == 'test_ground':
 
             ground_image = Image.open(self.root + self.test_id_list[index][1]).convert('RGB')
+            ground_image = self.transform_ground(ground_image)
+        
+            return ground_image, torch.tensor(index)
+        
+        elif self.mode == 'test_aerial':
+
             aerial_image = Image.open(self.root + self.test_id_list[index][0]).convert('RGB')
-
-        ground_iamge = self.transform_ground(ground_image)
-        aerial_image = self.transform_aerial(aerial_image)
-
-        return ground_image, aerial_image
+            aerial_image = self.transform_aerial(aerial_image)
+        
+            return aerial_image, torch.tensor(index)
+        
+        else:
+            print('not implemented!!')
+            raise Exception
 
     def __len__(self):
 
         if self.mode == 'train':
-
             return self.train_data_size
-
         elif 'test' in self.mode:
-
             return self.test_data_size
         else:
-
             print('not implemented!')
             raise Exception
         

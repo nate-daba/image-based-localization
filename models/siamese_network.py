@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from typing import Callable, List, Optional, Tuple, Union
 
 import torch
@@ -20,10 +21,16 @@ class SiameseNet(nn.Module):
         super(SiameseNet, self).__init__()
         
         print('Creating SiameseNet model ...')
-        self.ground_feature_extractor = FeatureExtractor(initialize_weights=True, extractor_type='ground')
-        self.aerial_feature_extractor = FeatureExtractor(initialize_weights=True, extractor_type='aerial')
-        
-        self.fc_layer = nn.Linear(512, 1024, bias=True)
+        # create feature extractor for ground images 
+        self.ground_embedding = nn.Sequential(OrderedDict([
+            ('feature_extractor', FeatureExtractor(initialize_weights=True, extractor_type='ground')), 
+            ('fc', nn.Linear(512, 1024, bias=True))]))
+        # create feature extractor for aerial images 
+        self.aerial_embedding = nn.Sequential(OrderedDict([
+            ('feature_extractor', FeatureExtractor(initialize_weights=True, extractor_type='aerial')), 
+            ('fc', nn.Linear(512, 1024, bias=True))]))
+        # share weights of fc layer between feature extractors
+        self.ground_embedding.fc = self.aerial_embedding.fc
         
     def forward(self, 
                 ground_image: Tensor, 
@@ -43,20 +50,11 @@ class SiameseNet(nn.Module):
             ground_fc (Tensor): output of linear layer for ground image.
             
         """
-        # extracted features: (B, C, H, W)
-        ground_features = self.ground_feature_extractor(ground_image)
-        aerial_features = self.aerial_feature_extractor(aerial_image)
+        # fully connected (fc) layer output: (B, 1024)
+        ground_embedding = self.ground_embedding(ground_image)
+        aerial_mebedding = self.aerial_embedding(aerial_image)
+        # L2 normalize to get final embedding: (B, 1024)
+        ground_embedding = F.normalize(ground_embedding, p=2, dim=1)
+        aerial_mebedding = F.normalize(aerial_mebedding, p=2, dim=1)
         
-        # global average pooling (gap): (B, C)
-        ground_gap = torch.mean(ground_features, (2, 3))
-        aerial_gap = torch.mean(aerial_features, (2, 3))
-        
-        # pass to fully connected (fc) layer: (B, 1024)
-        ground_fc = self.fc_layer(ground_gap)
-        aerial_fc = self.fc_layer(aerial_gap)
-        
-        # L2 normalize: (B, 4096)
-        ground_embed = F.normalize(ground_fc, p=2, dim=1)
-        aerial_embed = F.normalize(aerial_fc, p=2, dim=1)
-        
-        return ground_embed, aerial_embed
+        return ground_embedding, aerial_mebedding

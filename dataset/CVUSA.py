@@ -76,7 +76,7 @@ class CVUSA(torch.utils.data.Dataset):
             ground_image = Image.open(self.root + self.test_id_list[index][1]).convert('RGB')
             ground_image = self.transform_ground(ground_image)
         
-            return ground_image, torch.tensor(index)
+            return ground_image, torch.tensor(index), torch.tensor(index)
         
         elif self.mode == 'test_aerial':
 
@@ -98,8 +98,4 @@ class CVUSA(torch.utils.data.Dataset):
         else:
             print('not implemented!')
             raise Exception
-        
-        
-        
-        
-        
+            

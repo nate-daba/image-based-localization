@@ -115,9 +115,12 @@ class FeatureExtractor(nn.Module):
             features (Tensor): features extracted from image.
         
         """
+        # extracted features : (B, C, H, W)
         features = self.extract_features(image)
+        # global average pooling (gap): (B, C)
+        gap_output = torch.mean(features, (2, 3))
         
-        return features
+        return gap_output
     
     def initialize_weights(self) -> None:
         """Initializes weights of feature extractor with ImageNet-1k-trained weights of VGG16.

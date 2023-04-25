@@ -4,29 +4,24 @@ from typing import Callable, List, Optional, Tuple, Union
 from PIL import Image
 import numpy as np
 
-
-def transform_input(size):
-    
-    return transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225]),
-    ])
-
 class CVUSA(torch.utils.data.Dataset):
     
     def __init__(self, 
                  root : str = '/groups/amahalan/NatesData/CVUSA', 
-                 mode : str = 'train'):
+                 mode : str = 'train',
+                 aerial_color_space : str = 'RGB',
+                 ground_color_space : str = 'RGB'):
         super(CVUSA, self).__init__()
         
+        self.aerial_color_space = aerial_color_space
+        self.ground_color_space = ground_color_space
         self.mode = mode
         self.root = root
         self.aerial_size = [256, 256]
         self.ground_size = [112, 616]
         
-        self.transform_ground = transform_input(self.ground_size)
-        self.transform_aerial = transform_input(self.aerial_size)
+        self.transform_ground = get_input_transform(self.ground_color_space)
+        self.transform_aerial = get_input_transform(self.aerial_color_space)
         
         self.train_list = self.root + 'splits/train-19zl.csv'
         self.test_list = self.root + 'splits/val-19zl.csv'
@@ -38,7 +33,7 @@ class CVUSA(torch.utils.data.Dataset):
             for line in file:
                 data = line.split(',')
                 pano_id = (data[0].split('/')[-1]).split('.')[0]
-                # satellite filename, streetview filename, pano_id
+                # satellite img filename, streetview img filename, pano_id
                 self.train_id_list.append([data[0], data[1], pano_id])
                 self.train_id_idx_list.append(idx)
                 idx += 1
@@ -60,27 +55,29 @@ class CVUSA(torch.utils.data.Dataset):
     def __getitem__(self, index : int):
 
         if self.mode == 'train':
-
-            idx = index % len(self.train_id_idx_list)
-
-            ground_image = Image.open(self.root + self.train_id_list[idx][1]).convert('RGB')
-            aerial_image = Image.open(self.root + self.train_id_list[idx][0]).convert('RGB')
             
+            idx = index % len(self.train_id_idx_list)
+            ground_image = Image.open(self.root + self.train_id_list[idx][1]).\
+                convert(self.ground_color_space)
+            aerial_image = Image.open(self.root + self.train_id_list[idx][0]).\
+                convert(self.aerial_color_space)
             ground_image = self.transform_ground(ground_image)
             aerial_image = self.transform_aerial(aerial_image)
         
             return ground_image, aerial_image, torch.tensor(idx)
 
         elif self.mode == 'test_ground':
-
-            ground_image = Image.open(self.root + self.test_id_list[index][1]).convert('RGB')
+            
+            ground_image = Image.open(self.root + self.test_id_list[index][1]).\
+                convert(self.ground_color_space)
             ground_image = self.transform_ground(ground_image)
         
             return ground_image, torch.tensor(index), torch.tensor(index)
         
         elif self.mode == 'test_aerial':
-
-            aerial_image = Image.open(self.root + self.test_id_list[index][0]).convert('RGB')
+            
+            aerial_image = Image.open(self.root + self.test_id_list[index][0]).\
+                convert(self.aerial_color_space)
             aerial_image = self.transform_aerial(aerial_image)
         
             return aerial_image, torch.tensor(index)
@@ -98,4 +95,27 @@ class CVUSA(torch.utils.data.Dataset):
         else:
             print('not implemented!')
             raise Exception
+
+def get_input_transform(color_space='RGB'):
+    
+    if color_space=='RGB':
+        
+        return transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+        ])
+    
+    elif color_space=='L':
+        
+        return transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.4757],
+                                 std=[0.2201]),
+        ])
+    
+    else:
+        
+        print('not implemented!')
+        raise Exception
             

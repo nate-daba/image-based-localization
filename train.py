@@ -16,9 +16,12 @@ from utils.meters import AverageMeter, ProgressMeter
 from utils.learning_rate import adjust_learning_rate, get_lr
 from utils.metrics import accuracy
 from utils.save import save_checkpoint
+from utils.models import modify_model
 
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
+from torch.optim import SGD
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from datetime import datetime
@@ -77,6 +80,15 @@ parser.add_argument('--cos', action='store_true',
                     help='use cosine lr schedule')
 parser.add_argument('--mining', action='store_true',
                     help='mining')
+parser.add_argument('--ground-color-space', default='RGB', type=str,
+                    help='color space to use for ground images available \
+                        options: `RGB`, `L`)')
+parser.add_argument('--aerial-color-space', default='RGB', type=str,
+                    help='color space to use for aerial images (available \
+                        options: `RGB`, `L`)')
+parser.add_argument('--data-dir', default='/groups/amahalan/NatesData/CVUSA/', 
+                    type=str,
+                    help='root directory containing the CVUSA dataset')
 
 best_top1_accuracy = 0
 
@@ -88,47 +100,53 @@ def main():
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '9999'
     if not dist.is_initialized():
-        dist.init_process_group(backend='nccl', world_size=args.world_size, 
+        dist.init_process_group(backend=args.dist_backend, 
+                                world_size=args.world_size, 
                                 rank=args.rank)
     # create model
     model = SiameseNet()
+    model = modify_model(model, args)
+    print(model)
     torch.cuda.set_device(args.gpu)
     model.cuda()
     model = DDP(model, device_ids=[args.gpu])
     # create train and val dataloaders
-    train_dataset = CVUSA(root='/groups/amahalan/NatesData/CVUSA/', 
-                          mode='train')
-    val_ground_dataset = CVUSA(root='/groups/amahalan/NatesData/CVUSA/', 
-                               mode='test_ground')
-    val_aerial_dataset = CVUSA(root='/groups/amahalan/NatesData/CVUSA/', 
-                               mode='test_aerial')
-
+    train_dataset = CVUSA(root=args.data_dir, 
+                          mode='train', 
+                          ground_color_space=args.ground_color_space,
+                          aerial_color_space=args.aerial_color_space)
+    val_ground_dataset = CVUSA(root=args.data_dir, 
+                               mode='test_ground', 
+                               ground_color_space=args.ground_color_space)
+    val_aerial_dataset = CVUSA(root=args.data_dir, 
+                               mode='test_aerial', 
+                               aerial_color_space=args.aerial_color_space)
     train_sampler = DistributedMiningSampler(train_dataset, 
                                              batch_size=args.batch_size, 
                                              dim=args.dim, 
                                              save_path=args.save_path)
-    train_loader = torch.utils.data.DataLoader(train_dataset, 
-                                               batch_size=args.batch_size, 
-                                               shuffle=(train_sampler is None),
-                                               num_workers=args.workers, 
-                                               pin_memory=True, 
-                                               sampler=train_sampler, 
-                                               drop_last=True)
-    val_ground_loader = torch.utils.data.DataLoader(val_ground_dataset, 
-                                               batch_size=args.batch_size, 
-                                               shuffle=False,
-                                               num_workers=args.workers, 
-                                               pin_memory=True)
-    val_aerial_loader = torch.utils.data.DataLoader(val_aerial_dataset, 
-                                               batch_size=args.batch_size, 
-                                               shuffle=False,
-                                               num_workers=args.workers, 
-                                               pin_memory=True)
+    train_loader = DataLoader(train_dataset, 
+                              batch_size=args.batch_size, 
+                              shuffle=(train_sampler is None),
+                              num_workers=args.workers, 
+                              pin_memory=True, 
+                              sampler=train_sampler, 
+                              drop_last=True)
+    val_ground_loader = DataLoader(val_ground_dataset, 
+                                   batch_size=args.batch_size, 
+                                   shuffle=False,
+                                   num_workers=args.workers, 
+                                   pin_memory=True)
+    val_aerial_loader = DataLoader(val_aerial_dataset, 
+                                   batch_size=args.batch_size, 
+                                   shuffle=False,
+                                   num_workers=args.workers, 
+                                   pin_memory=True)
 
-    # create loss
+    # create soft-margin triplet loss
     criterion = SoftTripletBiLoss().cuda()
-    # create optimizer
-    optimizer = torch.optim.SGD(model.parameters(), 
+    # create SGD optimizer
+    optimizer = SGD(model.parameters(), 
                                 lr=args.lr, 
                                 momentum=args.momentum, 
                                 weight_decay=args.weight_decay)
@@ -215,8 +233,6 @@ def train(train_loader,
         del ground_embedding
         del aerial_embedding
 
-    return train_sampler
-
 def validate(val_ground_loader, val_aerial_loader, model, args):
     
     batch_time = AverageMeter('Time', ':6.3f')
@@ -249,10 +265,10 @@ def validate(val_ground_loader, val_aerial_loader, model, args):
             batch_aerial_embedding = aerial_model(aerial_images)
             aerial_embeddings[indexes.cpu().numpy().astype(int), :] = \
             batch_aerial_embedding.detach().cpu().numpy()
-            # measure elapsed time
+            # measure elapsed time since batch data was loaded
             batch_time.update(time.time() - end)
             end = time.time()
-            # display progress
+            # display validation progress
             if batch_idx % args.print_freq == 0:
                 progress_aerial.display(batch_idx)            
         end = time.time()
@@ -267,10 +283,10 @@ def validate(val_ground_loader, val_aerial_loader, model, args):
             ground_embeddings[indexes.cpu().numpy(), :] = \
             batch_ground_embedding.cpu().numpy()
             ground_labels[indexes.cpu().numpy()] = labels.cpu().numpy()
-            # measure elapsed time
+            # measure elapsed time since batch data was loaded
             batch_time.update(time.time() - end)
             end = time.time()
-            # display progress
+            # display validation progress
             if batch_idx % args.print_freq == 0:
                 progress_ground.display(batch_idx)   
         # compute top-k accuracy

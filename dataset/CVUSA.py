@@ -1,10 +1,13 @@
-import torch
-import torchvision.transforms as transforms
 from typing import Callable, List, Optional, Tuple, Union
+
+import torch
+from torch.utils.data import Dataset
+import torchvision.transforms as transforms
+
 from PIL import Image
 import numpy as np
 
-class CVUSA(torch.utils.data.Dataset):
+class CVUSA(Dataset):
     
     def __init__(self, 
                  root : str = '/groups/amahalan/NatesData/CVUSA', 

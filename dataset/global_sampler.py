@@ -10,7 +10,8 @@ import random
 
 T_co = TypeVar('T_co', covariant=True)
 
-# Distributed mining sampler code adopted from: https://github.com/Jeff-Zilence/TransGeo2022/blob/main/train.py
+# Distributed mining sampler code adopted from: 
+# https://github.com/Jeff-Zilence/TransGeo2022/blob/main/train.py
 class DistributedMiningSampler(DistributedSampler[T_co]):
     
     def __init__(self, dataset : Dataset, 
@@ -24,13 +25,20 @@ class DistributedMiningSampler(DistributedSampler[T_co]):
                  dim : int = 1000,
                  save_path : str = None) -> None:
         
-        super(DistributedMiningSampler, self).__init__(dataset, num_replicas, rank, shuffle, seed, drop_last)
+        super(DistributedMiningSampler, self).__init__(dataset, 
+                                                       num_replicas, 
+                                                       rank, 
+                                                       shuffle, 
+                                                       seed, 
+                                                       drop_last)
         self.dim = dim
         self.batch_size = batch_size * self.num_replicas
         self.queue_length = len(self.dataset)
-        self.current_size = len(self.dataset) // self.batch_size * self.batch_size
+        self.current_size = len(self.dataset) // self.batch_size * \
+            self.batch_size
         self.current_indices = np.arange(self.current_size)
-        self.queue_size = 1 # for computing moving average, not used in this implementation
+        self.queue_size = 1 # for computing moving average, not used in 
+        # this implementation
         self.queue = np.zeros([self.queue_length, self.queue_size, self.dim, 2])
         self.queue_ptr = 0
         self.queue_counter = np.zeros(self.queue_length,dtype=np.int)
@@ -39,15 +47,19 @@ class DistributedMiningSampler(DistributedSampler[T_co]):
         self.mining_pool_size = min(40000, self.queue_length)
         self.mining_save_size = 100
         self.choice_pool = range(self.mining_save_size)
-        self.mining_save = np.zeros([self.queue_length, self.mining_save_size],dtype=int)
+        self.mining_save = np.zeros([self.queue_length, self.mining_save_size],
+                                    dtype=int)
 
         self.mode = mode
 
     def update(self, data_sat, data_grd, indexes):
-        data_sat_norm = data_sat / np.linalg.norm(data_sat, axis=1, keepdims=True)
-        data_grd_norm = data_grd / np.linalg.norm(data_grd, axis=1, keepdims=True)
+        data_sat_norm = data_sat / np.linalg.norm(data_sat, axis=1, 
+                                                  keepdims=True)
+        data_grd_norm = data_grd / np.linalg.norm(data_grd, axis=1, 
+                                                  keepdims=True)
         batch_size = data_sat.shape[0]
-        # writing in distributed training style, complicated. Update the queue according to the previous index.
+        # writing in distributed training style, complicated. 
+        # Update the queue according to the previous index.
         for j in range(self.num_replicas):
             index_j = self.indices_out[j:self.current_size:self.num_replicas]
 

@@ -127,6 +127,10 @@ def main():
                                              batch_size=args.batch_size, 
                                              dim=args.dim, 
                                              save_path=args.save_path)
+    # if resuming training, load last saved sampler queue and counter
+    if args.resume_from:
+        train_sampler.load(args.resume_from.replace(args.resume_from.\
+            split('/')[-1],''))
     train_loader = DataLoader(train_dataset, 
                               batch_size=args.batch_size, 
                               shuffle=(train_sampler is None),

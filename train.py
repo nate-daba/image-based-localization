@@ -89,6 +89,8 @@ parser.add_argument('--aerial-color-space', default='RGB', type=str,
 parser.add_argument('--data-dir', default='/groups/amahalan/NatesData/CVUSA/', 
                     type=str,
                     help='root directory containing the CVUSA dataset')
+parser.add_argument('--resume-from', default='', type=str, metavar='PATH',
+                    help='path to latest checkpoint (default: none)')
 
 best_top1_accuracy = 0
 
@@ -150,8 +152,21 @@ def main():
                                 lr=args.lr, 
                                 momentum=args.momentum, 
                                 weight_decay=args.weight_decay)
-    
-    for epoch in range(args.epochs):
+    # load saved checkpoint if resuming training
+    if args.resume_from:
+        if os.path.isfile(args.resume_from):
+            print("=> loading checkpoint '{}'".format(args.resume))
+            checkpoint = torch.load(args.resume_from)
+            args.start_epoch = checkpoint['epoch']
+            best_top1_accuracy = checkpoint['best_top1_accuracy']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded checkpoint '{}' (epoch {})".
+                  format(args.resume_from, checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(args.resume))
+            
+    for epoch in range(args.start_epoch, args.epochs):
         
         print('start epoch:{}, date:{}'.format(epoch, datetime.now()))
         train_sampler.set_epoch(epoch)

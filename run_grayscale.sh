@@ -21,4 +21,4 @@ python train.py \
 --aerial-color-space='RGB' \
 --ground-color-space='L' \
 --data-dir='/groups/amahalan/NatesData/CVUSA/' \
---resume-from='./results/grayscale_expt_checkpoint.pth.tar'
+--ground-net-weights='./results/model_best.pth.tar'

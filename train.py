@@ -16,7 +16,7 @@ from utils.meters import AverageMeter, ProgressMeter
 from utils.learning_rate import adjust_learning_rate, get_lr
 from utils.metrics import accuracy
 from utils.save import save_checkpoint
-from utils.models import modify_model
+from utils.models import modify_model, copy_weights
 
 import numpy as np
 import torch
@@ -91,6 +91,8 @@ parser.add_argument('--data-dir', default='/groups/amahalan/NatesData/CVUSA/',
                     help='root directory containing the CVUSA dataset')
 parser.add_argument('--resume-from', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
+parser.add_argument('--ground-net-weights', default='', type=str, metavar='PATH',
+                    help='path to desired checkpoint (default: none)')
 
 best_top1_accuracy = 0
 
@@ -112,6 +114,11 @@ def main():
     torch.cuda.set_device(args.gpu)
     model.cuda()
     model = DDP(model, device_ids=[args.gpu])
+    # copy weights from pre-trained RGB ground net to grayscale ground net
+    if args.ground_net_weights:
+        print("=> Initializing ground net with weights from checkpoint \
+                '{}'".format(args.ground_net_weights))
+        copy_weights(model, args)
     # create train and val dataloaders
     train_dataset = CVUSA(root=args.data_dir, 
                           mode='train', 

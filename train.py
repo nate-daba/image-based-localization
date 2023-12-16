@@ -109,7 +109,7 @@ def main():
                                 rank=args.rank)
     # create model
     model = SiameseNet()
-    model = modify_model(model, args)
+    # model = modify_model(model, args)
     print(model)
     torch.cuda.set_device(args.gpu)
     model.cuda()
@@ -208,7 +208,7 @@ def train(train_loader,
           args=None, 
           train_sampler=None):
     
-    # initialize meters
+    # initialize meters to keep track of time-varying variables
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -230,6 +230,8 @@ def train(train_loader,
         # measure data loading time
         data_time.update(time.time() - end)
         
+        if args.ground_color_space == 'L':
+            ground_images = torch.cat([ground_images] * 3, dim=1)
         ground_images = ground_images.cuda()
         aerial_images = aerial_images.cuda()
         indexes = indexes.cuda()
@@ -301,6 +303,8 @@ def validate(val_ground_loader, val_aerial_loader, model, args):
         # compute all ground image embeddings
         for batch_idx, (ground_images, indexes, labels) in \
             enumerate(val_ground_loader):
+            if args.ground_color_space == 'L':
+                ground_images = torch.cat([ground_images] * 3, dim=1)
             ground_images = ground_images.cuda()
             indexes = indexes.cuda()
             labels = labels.cuda()
